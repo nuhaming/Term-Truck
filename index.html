@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TermTrack: you signed it, we remember it</title>
+<meta name="description" content="TermTrack finds the dates buried in your contracts and gives every obligation an owner and a reminder.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%93%85%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#2447f5">
+<meta property="og:title" content="TermTrack: you signed it, we remember it">
+<meta property="og:description" content="Never miss a contract notice date again.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--desk:#2447f5;--paper:#ffffff;--tx:#14171f;--mu:#5b6270;--rule:#e4e6ee;--hl:#ffe14d;--red:#f0364a;--grn:#0f9d58;--pen:#2447f5;--sh:rgba(5,15,70,.45);--sf:"Libre Caslon Text",Georgia,"Times New Roman",serif;--hw:"Caveat","Segoe Print","Bradley Hand",cursive}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--desk:#0b1230;--paper:#eef0f6;--sh:rgba(0,0,0,.6);--hl:#f5d94a}}
+:root[data-theme="dark"]{color-scheme:dark;--desk:#0b1230;--paper:#eef0f6;--sh:rgba(0,0,0,.6);--hl:#f5d94a}
+html{scroll-padding-top:env(safe-area-inset-top,0px);scroll-behavior:smooth}
+*{box-sizing:border-box}
+body{margin:0;background:var(--desk);color:var(--tx);font:18px/1.7 var(--sf);overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--desk);z-index:10}
+:focus-visible{outline:3px solid var(--pen);outline-offset:3px}
+a{color:inherit}
+nav{max-width:1100px;margin:0 auto;padding:18px 20px;display:flex;justify-content:space-between;align-items:center}
+.logo{font-weight:700;font-size:22px;text-decoration:none;color:#ffffff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .logo{color:#e8ebed}}
+:root[data-theme="dark"] .logo{color:#e8ebed}
+.lnk{font-size:15px;color:#ffffff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .lnk{color:#e8ebed}}
+:root[data-theme="dark"] .lnk{color:#e8ebed}
+.sheet{position:relative;width:min(780px,calc(100% - 24px));margin:12px auto 60px;background:var(--paper);padding:56px 64px 64px;box-shadow:0 2px 0 var(--rule),0 30px 60px -20px var(--sh)}
+@media (min-width:1000px){.sheet{transform:rotate(-.35deg)}}
+h1{font-size:clamp(34px,5.2vw,52px);line-height:1.08;margin:0 0 26px;font-weight:700;letter-spacing:-.02em}
+h2{font-size:24px;line-height:1.2;margin:56px 0 12px;font-weight:700}
+h2 span{color:var(--mu);font-weight:400;margin-right:10px}
+p{margin:0 0 14px;max-width:62ch}
+.mu{color:var(--mu)}
+/* the clause */
+.clause{position:relative;border-left:4px double var(--rule);padding:14px 18px 14px 22px;margin:8px 0 18px}
+.clause .n{font-size:14px;color:var(--mu);margin:0 0 4px}
+.clause blockquote{margin:0;font-style:italic;font-size:19px}
+mark{background:var(--hl);color:#14171f;padding:0 3px}
+.cd{margin:14px 0 0;font-size:15px;color:var(--mu)}
+.cd b{color:var(--tx);font-variant-numeric:tabular-nums}
+.stamp{position:absolute;right:6px;top:46px;border:4px solid;padding:6px 14px;border-radius:6px;font-weight:700;font-size:22px;line-height:1.15;text-align:center;opacity:0;pointer-events:none;background:color-mix(in srgb,var(--paper) 78%,transparent)}
+.stamp small{display:block;font-size:13px;font-weight:400}
+.stamp.bad{color:var(--red);border-color:var(--red)}
+.stamp.good{color:var(--grn);border-color:var(--grn)}
+.stamp.on{opacity:.95;transform:rotate(-8deg);animation:slam .45s cubic-bezier(.2,1.4,.4,1)}
+@keyframes slam{from{transform:rotate(-20deg) scale(3);opacity:0}to{transform:rotate(-8deg) scale(1);opacity:.95}}
+.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.acts{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:6px 0 24px}
+.btn{font:700 16px var(--sf);padding:12px 20px;border:2px solid var(--pen);background:var(--pen);color:#fff;cursor:pointer;text-decoration:none;display:inline-block}
+.btn.o{background:transparent;color:var(--tx)}
+.res{font-size:15px;color:var(--mu);background:none;border:0;text-decoration:underline;cursor:pointer;font-family:var(--sf)}
+.verdict{min-height:3.2em;font-size:16px}
+/* margin notes */
+.note{font:600 24px/1.1 var(--hw);color:var(--pen);position:absolute;right:-196px;width:176px;transform:rotate(3deg)}
+.note::before{content:"";position:absolute;left:-34px;top:12px;width:28px;border-top:2px solid var(--pen);transform:rotate(-8deg)}
+@media (max-width:1180px){.note{position:static;display:block;width:auto;margin:-4px 0 14px;transform:none;font-size:22px}.note::before{display:none}}
+ol.l{padding-left:1.5em;margin:0 0 14px}
+ol.l li{margin-bottom:8px;padding-left:4px}
+ol.s{list-style:none;padding:0;margin:0;counter-reset:cs}
+ol.s li{counter-increment:cs;margin-bottom:10px;padding-left:44px;position:relative}
+ol.s li::before{content:"3." counter(cs);position:absolute;left:0;color:var(--mu)}
+.parties{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 0}
+.parties span{border-bottom:2px solid var(--pen);font-family:var(--hw);font-size:22px;color:var(--pen);padding:0 6px;line-height:1.3}
+.fine{font-size:14px;line-height:1.55;color:var(--mu);border-top:1px solid var(--rule);padding-top:14px;margin-top:48px}
+.fine p{max-width:none}
+.sign{margin-top:44px;display:flex;align-items:flex-end;gap:22px;flex-wrap:wrap}
+.line{flex:1;min-width:200px;border-bottom:2px solid var(--tx);height:54px;position:relative}
+.line i{position:absolute;left:8px;bottom:2px;font:600 42px/1 var(--hw);color:var(--pen);font-style:normal;opacity:0;transform:translateX(-8px);transition:.5s}
+.sign:hover .line i,.sign:focus-within .line i{opacity:1;transform:none}
+@media (max-width:700px){.sheet{padding:34px 22px 44px}.stamp{position:static;display:inline-block;margin-top:12px;font-size:18px}.stamp.on{animation:none;transform:rotate(-3deg);opacity:1}.stamp:not(.on){display:none}}
+.btn:hover{filter:brightness(1.12)}.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+@media (hover:none){.line i{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.stamp.on,.shake{animation:none}.line i{transition:none}html{scroll-behavior:auto}}
+footer{text-align:center;color:#ffffff;font-size:14px;padding:0 20px 36px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) footer{color:#c4cdf5}}
+:root[data-theme="dark"] footer{color:#c4cdf5}
+@media (min-width:1181px){.note{color:#fff}.note::before{border-color:#fff}}
+</style>
+</head>
+<body>
+<nav><a class="logo" href="#top">TermTrack</a><a class="lnk" href="app.html">Try the prototype</a></nav>
+
+<main class="sheet" id="top">
+<h1>You signed this. Do you remember when it ends?</h1>
+
+<div class="clause" id="clause">
+<p class="n">Office lease, clause 14.2</p>
+<blockquote>This lease renews automatically for a further twelve months unless the Tenant gives <mark>written notice 60 days</mark> before the lease ends on <mark>31 January 2027</mark>.</blockquote>
+<p class="cd" id="cd">Notice window closes in <b id="t">…</b></p>
+<div class="stamp bad" id="sb">Renewed for 12 months<small>Nobody sent the notice</small></div>
+<div class="stamp good" id="sg">Reminder set<small>Owner: Operations</small></div>
+</div>
+<span class="note">Page 31 of 48. Nobody reads this part.</span>
+
+<div class="acts">
+<button class="btn o" id="no" type="button">Do nothing</button>
+<button class="btn" id="yes" type="button">Track it with TermTrack</button>
+<button class="res" id="rs" type="button" hidden>Start over</button>
+</div>
+<p class="verdict" id="v" aria-live="polite">Pick one and see what happens on 2 December.</p>
+
+<p>TermTrack keeps your agreements in one searchable place, finds the dates and notice periods hidden in them, and gives each obligation an owner and a reminder.</p>
+
+<h2><span>1.</span>Where your agreements live</h2>
+<p>In email, on laptops, in paper folders, and in shared drives. Important dates sit in long documents, notice periods slip by, and when the deadline comes nobody is sure whose job it was. Finding the latest signed version takes an afternoon.</p>
+
+<h2><span>2.</span>What TermTrack does</h2>
+<ol class="l" type="a">
+<li>Stores agreements securely and organizes them by category, department, counterparty, and status.</li>
+<li>Finds contracts by party name, date, type, or keyword.</li>
+<li>Suggests parties, dates, renewal terms, and key clauses, then waits for a person to confirm.</li>
+<li>Reminds the responsible person before renewals, notice periods, and payment milestones.</li>
+<li>Assigns every obligation to a person or a team.</li>
+<li>Keeps a version history and limits who can view, download, or edit sensitive agreements.</li>
+</ol>
+<span class="note">Reminders show their status, so you can see if one failed.</span>
+
+<h2><span>3.</span>How it works</h2>
+<ol class="s">
+<li>Create a workspace and invite authorized staff.</li>
+<li>Upload a contract, or enter the record by hand.</li>
+<li>Review the suggested details next to the source text.</li>
+<li>Confirm them and assign an owner.</li>
+<li>Receive reminders before each deadline.</li>
+<li>Update the status and record the action taken.</li>
+</ol>
+
+<h2><span>4.</span>Who may sign</h2>
+<p>Small and medium-sized companies, NGOs, schools, and professional firms that manage recurring agreements, and the people who run them:</p>
+<div class="parties"><span>operations</span><span>procurement</span><span>finance</span><span>HR</span><span>legal</span></div>
+
+<div class="sign">
+<div class="line"><i>TermTrack</i></div>
+<a class="btn" href="app.html">Sign here: try the prototype</a>
+</div>
+
+<div class="fine">
+<p><b>Fine print, in plain language.</b> Contracts are confidential, so access controls, encryption, audit logs, and retention policies are part of the design. Automated extraction can misread legal wording, which is why a person confirms every detail and the original document is always kept. TermTrack organizes agreements and deadlines. It is not a lawyer and does not give legal advice.</p>
+</div>
+</main>
+<footer>© 2026 TermTrack. Early-stage concept; examples are illustrative.</footer>
+
+<script>
+(function(){
+var $=function(i){return document.getElementById(i)};
+var end=new Date(2026,11,2,23,59,59);
+function tick(){var d=end-new Date(),el=$("t");
+if(d<=0){el.textContent="closed "+Math.floor(-d/864e5)+" days ago";return}
+var D=Math.floor(d/864e5),H=Math.floor(d/36e5)%24,M=Math.floor(d/6e4)%60,S=Math.floor(d/1e3)%60;
+el.textContent=D+"d "+H+"h "+M+"m "+S+"s"}
+tick();setInterval(tick,1000);
+var sb=$("sb"),sg=$("sg"),c=$("clause"),v=$("v"),rs=$("rs"),no=$("no"),yes=$("yes");
+function done(msg){no.disabled=yes.disabled=true;rs.hidden=false;v.textContent=msg;rs.focus()}
+no.onclick=function(){done("On 3 December the lease renews for another year at the current rent. The notice window is gone.");sb.classList.add("on");c.classList.remove("shake");void c.offsetWidth;c.classList.add("shake")};
+yes.onclick=function(){done("TermTrack suggested the dates, a person confirmed them, and reminders go to Operations before 2 December.");sg.classList.add("on")};
+rs.onclick=function(){sb.classList.remove("on");sg.classList.remove("on");c.classList.remove("shake");no.disabled=yes.disabled=false;rs.hidden=true;v.textContent="Pick one and see what happens on 2 December.";yes.focus()};
+})();
+</script>
+</body>
+</html>

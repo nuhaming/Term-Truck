@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TermTrack: contract tracker</title>
+<meta name="description" content="Track contracts, notice periods and obligations.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%93%85%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#2447f5">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f4f6ff;--card:#fff;--tx:#1b2430;--mu:#64707f;--bd:#dfe3f3;--ac:#2447f5;--acx:#fff;--wa:#b45309;--da:#b91c1c;--ok:#15803d}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#0b1230;--card:#141c42;--tx:#e8edf2;--mu:#94a0ae;--bd:#2a3470;--ac:#8aa0ff;--acx:#0b1230;--wa:#f59e0b;--da:#f87171;--ok:#4ade80}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#0b1230;--card:#141c42;--tx:#e8edf2;--mu:#94a0ae;--bd:#2a3470;--ac:#8aa0ff;--acx:#0b1230;--wa:#f59e0b;--da:#f87171;--ok:#4ade80}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px 16px;border-bottom:1px solid var(--bd);background:var(--card)}
+h1{font-size:18px;margin:0}h1 span{color:var(--ac)}
+main{max-width:980px;margin:0 auto;padding:16px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px}
+.stat b{display:block;font-size:24px}.stat small{color:var(--mu)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+input,select,textarea,button{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:8px 10px}
+input[type=search]{flex:1;min-width:160px}
+button{cursor:pointer}button.p{background:var(--ac);color:var(--acx);border-color:var(--ac);font-weight:600}
+button.s{padding:4px 8px;font-size:13px}
+.item{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:flex-start}
+.t{font-weight:600}.m{color:var(--mu);font-size:13px}
+.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;border:1px solid var(--bd);margin-right:4px}
+.late{color:var(--da)}.soon{color:var(--wa)}.fine{color:var(--ok)}
+.ob{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px dashed var(--bd);font-size:14px}
+.ob.done span.n{text-decoration:line-through;color:var(--mu)}
+dialog{background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:12px;max-width:520px;width:calc(100% - 24px)}
+dialog::backdrop{background:#0008}
+label{display:block;font-size:13px;color:var(--mu);margin:8px 0 2px}
+dialog input,dialog select,dialog textarea{width:100%}
+.hist{font-size:12px;color:var(--mu);margin-top:6px}
+button:disabled{opacity:.5}:focus-visible{outline:2px solid var(--ac);outline-offset:2px}.ob button.s:first-of-type{margin-left:auto}summary{cursor:pointer}
+@media (max-width:600px){header{flex-wrap:wrap}.bar select{flex:1}.ob{align-items:flex-start}}
+.note{font-size:12px;color:var(--mu);margin-top:20px;text-align:center}
+</style>
+</head>
+<body>
+<header><h1><a href="index.html" style="text-decoration:none;color:inherit">Term<span>Track</span></a></h1><div><button id="ex" class="s">Export</button> <button id="nw" class="p">+ New contract</button></div></header>
+<main>
+<div class="stats" id="stats"></div>
+<div class="bar">
+<input type="search" id="q" aria-label="Search contracts" placeholder="Search party, type, keyword…">
+<select id="fs" aria-label="Filter by status"><option value="">All statuses</option><option>Draft</option><option>Active</option><option>Expiring</option><option>Expired</option><option>Terminated</option></select>
+<select id="fc" aria-label="Filter by category"><option value="">All categories</option></select>
+<select id="so" aria-label="Sort"><option value="e">Sort: end date</option><option value="n">Sort: notice deadline</option><option value="t">Sort: title</option></select>
+</div>
+<div id="list"></div>
+<p class="note">Prototype: data is saved in this browser only. TermTrack organizes agreements and reminders; it is not legal advice.</p>
+</main>
+
+<dialog id="dlg"><div>
+<h2 id="dt" style="margin-top:0;font-size:17px">New contract</h2>
+<label>Title</label><input id="f_title">
+<label>Counterparty</label><input id="f_party">
+<div class="row"><div style="flex:1"><label>Category</label><select id="f_cat"></select></div><div style="flex:1"><label>Status (Expiring and Expired are set from dates)</label><select id="f_st"><option>Draft</option><option selected>Active</option><option>Terminated</option></select></div></div>
+<div class="row"><div style="flex:1"><label>Start date</label><input type="date" id="f_s"></div><div style="flex:1"><label>End date</label><input type="date" id="f_e"></div></div>
+<div class="row"><div style="flex:1"><label>Owner</label><input id="f_o" placeholder="Person or team"></div><div style="flex:1"><label>Notice period (days)</label><input type="number" id="f_n" min="0" value="30"></div></div>
+<label><input type="checkbox" id="f_ar" style="width:auto"> Auto-renews unless notice is given</label><label>Document (PDF, Word, image or text; max 8 MB)</label><input type="file" id="f_f" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt"><div id="f_cur" class="m"></div><p id="f_err" class="late m" role="alert"></p>
+<label>Notes</label><textarea id="f_nt" rows="2"></textarea>
+<div class="row" style="margin-top:12px"><button id="del" class="s late" type="button">Delete</button><div><button type="button" id="cn">Cancel</button> <button type="button" id="sv" class="p">Save</button></div></div>
+</div></dialog>
+
+<dialog id="od"><div>
+<h2 id="ot" style="margin-top:0;font-size:17px">Add obligation</h2>
+<label>What needs to happen?</label><input id="o_t" placeholder="e.g. Send renewal notice">
+<label>Due date</label><input type="date" id="o_d">
+<label>Owner</label><input id="o_o"><p id="o_err" class="late m" role="alert"></p>
+<div class="row" style="margin-top:12px"><span></span><div><button type="button" id="oc">Cancel</button> <button type="button" id="os" class="p">Add</button></div></div>
+</div></dialog>
+
+<script>
+var KEY="termtrack:v1",CATS=["Supplier","Lease","Service","Employment","Partnership","Other"];
+var LB={title:"title",party:"counterparty",cat:"category",st:"status",s:"start date",e:"end date",owner:"owner",notice:"notice period",notes:"notes",ar:"auto-renew"};var shown=[];var data=[];var editing=null,addingTo=null,editingOb=null;
+function load(){var r=null;try{r=localStorage.getItem(KEY);if(r)data=JSON.parse(r)}catch(e){}
+if(r===null){var d=function(n){var x=new Date();x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
+data=[{id:1,title:"Office lease – Bole branch",party:"Abay Properties",cat:"Lease",st:"Active",s:d(-300),e:d(45),owner:"Operations",notice:60,notes:"Auto-renews unless notice is given.",file:"lease_signed.pdf",obs:[{t:"Send non-renewal notice",d:d(-15),o:"Operations",done:false},{t:"Pay quarterly rent",d:d(10),o:"Finance",done:false}],hist:[{w:d(-300),a:"Contract created"}]},
+{id:2,title:"IT support agreement",party:"NetWorks PLC",cat:"Service",st:"Active",s:d(-100),e:d(260),owner:"IT",notice:30,notes:"",file:"",obs:[{t:"Review SLA performance",d:d(80),o:"IT",done:false}],hist:[{w:d(-100),a:"Contract created"}]}]}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
+var $=function(i){return document.getElementById(i)};
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function days(s){if(!s)return null;var a=new Date(s+"T00:00:00"),b=new Date();b.setHours(0,0,0,0);return Math.round((a-b)/864e5)}
+function due(n){if(n==null)return"";if(n<0)return'<span class="late">'+(-n)+"d overdue</span>";if(n===0)return'<span class="soon">due today</span>';if(n<=30)return'<span class="soon">in '+n+"d</span>";return'<span class="fine">in '+n+"d</span>"}
+function noticeDate(c){var n=days(c.e);return n==null?null:n-(+c.notice||0)}
+function log(c,a){c.hist.unshift({w:new Date().toISOString(),a:a})}
+function iso(x){return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0")}
+function addD(t,n){var x=new Date(t+"T00:00:00");x.setDate(x.getDate()+n);return iso(x)}
+function noticeOn(c){return c.e?addD(c.e,-(+c.notice||0)):null}
+function st(c){if(c.st==="Draft"||c.st==="Terminated")return c.st;var ne=days(c.e);if(ne==null)return"Active";if(ne<0)return"Expired";return noticeDate(c)<=30?"Expiring":"Active"}
+function act(c){var x=st(c);return x==="Active"||x==="Expiring"}
+var DB=null;function dbo(cb){if(DB)return cb(DB);try{var r=indexedDB.open("termtrack-docs",1);r.onupgradeneeded=function(){r.result.createObjectStore("f")};r.onsuccess=function(){DB=r.result;cb(DB)};r.onerror=function(){cb(null)}}catch(e){cb(null)}}
+function putDoc(id,b,cb){dbo(function(d){if(!d)return cb(false);var t=d.transaction("f","readwrite");t.objectStore("f").put(b,id);t.oncomplete=function(){cb(true)};t.onerror=function(){cb(false)}})}
+function getDoc(id,cb){dbo(function(d){if(!d)return cb(null);var q=d.transaction("f").objectStore("f").get(id);q.onsuccess=function(){cb(q.result||null)};q.onerror=function(){cb(null)}})}
+function delDoc(id){dbo(function(d){if(d)d.transaction("f","readwrite").objectStore("f").delete(id)})}
+function dl(id){var c=data.find(function(x){return x.id===id});getDoc(id,function(b){if(!b){alert("No stored copy of this document in this browser. Re-upload it with Edit.");return}var a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=c.file;document.body.appendChild(a);a.click();a.remove()})}
+function render(){
+var q=$("q").value.toLowerCase(),fs=$("fs").value,fc=$("fc").value;
+var open=0,late=0,soon=0;
+data.forEach(function(c){c.obs.forEach(function(o){if(!o.done){open++;var n=days(o.d);if(n!=null&&n<0)late++;else if(n!=null&&n<=30)soon++}});var nd=noticeDate(c);if(act(c)&&nd!=null&&nd>=0&&nd<=30)soon++;if(act(c)&&nd!=null&&nd<0&&days(c.e)>=0)late++});
+$("stats").innerHTML='<div class="stat"><b>'+data.length+'</b><small>Contracts</small></div><div class="stat"><b class="soon">'+data.filter(function(c){return st(c)==="Expiring"}).length+'</b><small>Expiring</small></div><div class="stat"><b class="late">'+data.filter(function(c){return st(c)==="Expired"}).length+'</b><small>Expired</small></div><div class="stat"><b>'+open+'</b><small>Open obligations</small></div><div class="stat"><b class="soon">'+soon+'</b><small>Due within 30 days</small></div><div class="stat"><b class="late">'+late+'</b><small>Overdue / notice passed</small></div>';
+var l=shown=data.filter(function(c){var t=[c.title,c.party,c.cat,c.notes,c.owner,c.file,st(c)].concat(c.obs.map(function(o){return o.t})).join(" ").toLowerCase();return(!q||t.indexOf(q)>-1)&&(!fs||st(c)===fs)&&(!fc||c.cat===fc)}).sort(function(a,b){var k=$("so").value;if(k==="t")return a.title.localeCompare(b.title);var f=k==="n"?function(c){var n=noticeDate(c);return n==null?9e9:n}:function(c){var n=days(c.e);return n==null?9e9:n};return f(a)-f(b)});
+$("list").innerHTML=l.length?l.map(card).join(""):'<p class="m">No contracts match. Click "+ New contract" to add one.</p>'}
+function card(c){var nd=noticeDate(c),ne=days(c.e);
+var warn=(act(c)&&nd!=null)?(nd<0&&ne>=0?'<div class="late m">Notice deadline passed '+(-nd)+" days ago</div>":(nd>=0&&nd<=30?'<div class="soon m">Notice deadline in '+nd+" days</div>":'<div class="m">Notice deadline in '+nd+" days</div>")):"";
+return'<div class="item"><div class="row"><div><div class="t">'+esc(c.title)+'</div><div class="m">'+esc(c.party)+" · Owner: "+esc(c.owner||"unassigned")+'</div></div><div><span class="tag">'+esc(c.cat)+'</span><span class="tag">'+esc(st(c))+"</span></div></div>"+
+'<div class="m">'+(c.s||"?")+" → "+(c.e||"no end date")+(ne!=null?" ("+due(ne)+")":"")+(c.file?(c.doc?' · <button class="s" onclick="dl('+c.id+')">⬇ '+esc(c.file)+"</button>":" · 📎 "+esc(c.file)+" (name only, no stored copy)"):"")+"</div>"+warn+(nd!=null&&c.e&&act(c)?'<div class="m">Notice by '+noticeOn(c)+(c.ar?" · auto-renews on "+c.e+" if no notice is given":"")+"</div>":"")+(c.notes?'<div class="m">'+esc(c.notes)+"</div>":"")+
+c.obs.map(function(o,i){return'<div class="ob'+(o.done?" done":"")+'"><input type="checkbox" aria-label="Mark done" '+(o.done?"checked":"")+' onchange="tg('+c.id+","+i+')"><span class="n">'+esc(o.t)+'</span><span class="m">'+o.d+" · "+esc(o.o||"")+"</span>"+(o.done?"":due(days(o.d)))+'<button class="s" aria-label="Edit obligation" onclick="eo('+c.id+","+i+')">Edit</button><button class="s" aria-label="Remove obligation" onclick="rm('+c.id+","+i+')">×</button></div>'}).join("")+
+'<div style="margin-top:8px"><button class="s" onclick="ao('+c.id+')">+ Obligation</button> <button class="s" onclick="ed('+c.id+')">Edit</button></div>'+
+'<details class="hist"><summary>Activity ('+c.hist.length+')</summary>'+c.hist.map(function(h){return"<div>"+esc(String(h.w).slice(0,16).replace("T"," "))+" — "+esc(h.a)+"</div>"}).join("")+"</details></div>"}
+function tg(id,i){var c=data.find(function(x){return x.id===id});var o=c.obs[i];o.done=!o.done;log(c,(o.done?"Completed: ":"Reopened: ")+o.t);save();render()}
+function rm(id,i){var c=data.find(function(x){return x.id===id});if(!confirm("Remove this obligation?"))return;log(c,"Obligation removed: "+c.obs[i].t);c.obs.splice(i,1);save();render()}
+function fill(){$("f_cat").innerHTML=CATS.map(function(x){return"<option>"+x+"</option>"}).join("");$("fc").innerHTML='<option value="">All categories</option>'+CATS.map(function(x){return"<option>"+x+"</option>"}).join("")}
+function ed(id){editing=id;var c=id?data.find(function(x){return x.id===id}):{title:"",party:"",cat:"Supplier",st:"Active",s:"",e:"",owner:"",notice:30,notes:""};
+$("dt").textContent=id?"Edit contract":"New contract";$("del").style.display=id?"":"none";
+$("f_title").value=c.title;$("f_party").value=c.party;$("f_cat").value=c.cat;$("f_st").value=(c.st==="Draft"||c.st==="Terminated")?c.st:"Active";$("f_s").value=c.s;$("f_e").value=c.e;$("f_o").value=c.owner;$("f_n").value=c.notice;$("f_nt").value=c.notes;$("f_f").value="";$("f_ar").checked=!!c.ar;$("f_err").textContent="";$("f_cur").textContent=c.file?"Current document: "+c.file+(c.doc?"":" (name only, no stored copy)")+". Choose a file to replace it.":"";$("dlg").showModal()}
+$("nw").onclick=function(){ed(null)};$("cn").onclick=function(){$("dlg").close()};
+$("sv").onclick=function(){var t=$("f_title").value.trim();var er=$("f_err"),f0=$("f_f").files[0],dr=$("f_st").value==="Draft",nt=$("f_n").value;er.textContent="";
+function bad(m,el){er.textContent=m;el.focus()}
+if(!t)return bad("Title is required.",$("f_title"));
+if(!$("f_party").value.trim())return bad("Counterparty is required.",$("f_party"));
+if(!dr&&!$("f_e").value)return bad("End date is required unless the contract is a Draft.",$("f_e"));
+if($("f_s").value&&$("f_e").value&&$("f_e").value<$("f_s").value)return bad("The end date must be after the start date.",$("f_e"));
+if(!/^\d+$/.test(nt)||+nt>3650)return bad("Notice period must be a whole number of days from 0 to 3650.",$("f_n"));
+if(f0&&f0.size>8388608)return bad("The document is larger than 8 MB.",$("f_f"));
+var f=$("f_f").files[0],v={title:t,party:$("f_party").value.trim(),cat:$("f_cat").value,st:$("f_st").value,s:$("f_s").value,e:$("f_e").value,owner:$("f_o").value.trim(),notice:+$("f_n").value||0,notes:$("f_nt").value.trim(),ar:$("f_ar").checked};
+if(editing){var c=data.find(function(x){return x.id===editing});var ch=[];for(var k in v){if(c[k]!==v[k])ch.push(LB[k]||k)}Object.assign(c,v);if(f){c.file=f.name;c.doc=false}log(c,"Details updated"+(ch.length?": "+ch.join(", "):"")+(f?" (new document: "+f.name+")":""))}
+else{v.id=Date.now();v.file=f?f.name:"";v.doc=false;v.obs=[];v.hist=[{w:new Date().toISOString().slice(0,10),a:"Contract created"}];data.push(v)}
+save();$("dlg").close();render();if(f){var cid=editing||v.id;putDoc(cid,f,function(ok){var c2=data.find(function(x){return x.id===cid});if(c2){c2.doc=ok;save();render()}if(!ok)alert("Could not store the document in this browser; only its name was saved.")})}};
+$("del").onclick=function(){if(confirm("Delete this contract and its obligations?")){delDoc(editing);data=data.filter(function(x){return x.id!==editing});save();$("dlg").close();render()}};
+function ao(id){addingTo=id;editingOb=null;$("ot").textContent="Add obligation";$("o_err").textContent="";$("o_t").value="";$("o_d").value="";$("o_o").value="";$("od").showModal()}
+function eo(id,i){var c=data.find(function(x){return x.id===id}),o=c.obs[i];addingTo=id;editingOb=i;$("ot").textContent="Edit obligation";$("o_err").textContent="";$("o_t").value=o.t;$("o_d").value=o.d;$("o_o").value=o.o||"";$("od").showModal()}
+$("oc").onclick=function(){$("od").close()};
+$("os").onclick=function(){var t=$("o_t").value.trim(),d=$("o_d").value;if(!t||!d){$("o_err").textContent="Enter what needs to happen and a due date.";return}$("o_err").textContent="";var c=data.find(function(x){return x.id===addingTo});var ow=$("o_o").value.trim()||c.owner;if(editingOb!=null){var o=c.obs[editingOb];log(c,"Obligation edited: "+o.t+(o.t!==t?" → "+t:"")+" (due "+d+")");o.t=t;o.d=d;o.o=ow}else{c.obs.push({t:t,d:d,o:ow,done:false});log(c,"Obligation added: "+t)}save();$("od").close();render()};
+$("ex").onclick=function(){var rows=shown.length?shown:data;if(!rows.length){alert("There are no contracts to export.");return}
+function cell(v){v=String(v==null?"":v);if(/^[=+\-@\t\r]/.test(v))v="'"+v;return'"'+v.replace(/"/g,'""')+'"'}
+var r=[["Title","Counterparty","Category","Status","Start","End","Days to end","Notice days","Notice deadline","Auto-renews","Owner","Open obligations","Next obligation due","Document","Notes"]].concat(rows.map(function(c){var o=c.obs.filter(function(x){return!x.done}).map(function(x){return x.d}).sort();return[c.title,c.party,c.cat,st(c),c.s,c.e,days(c.e),c.notice,noticeOn(c),c.ar?"Yes":"No",c.owner,o.length,o[0]||"",c.file,c.notes]}));
+var csv=r.map(function(x){return x.map(cell).join(",")}).join("\r\n");
+var a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv"}));a.download="termtrack-contracts-"+iso(new Date())+".csv";document.body.appendChild(a);a.click();a.remove()};
+["q","fs","fc","so"].forEach(function(i){$(i).oninput=render});
+document.querySelectorAll("label").forEach(function(l){var n=l.nextElementSibling;if(n&&n.id)l.htmlFor=n.id});
+fill();load();render();
+</script>
+</body>
+</html>
